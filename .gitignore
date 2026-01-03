@@ -1,0 +1,5 @@
+.env
+*.key
+*.conf
+!.env.example
+!docker/Caddyfile
