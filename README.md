@@ -1,94 +1,62 @@
 # Private Server Stack
 
-Personal privacy-focused server with VPN, ad blocking, and password management.
+Personal privacy-focused server with VPN, ad blocking, password management, and Telegram bot.
 
-## What's Included
+## Services
 
 | Service | Purpose |
 |---------|---------|
-| **WireGuard** | VPN with Iceland IP |
-| **AdGuard Home** | DNS-based ad blocking |
-| **Vaultwarden** | Self-hosted Bitwarden |
-| **Caddy** | Automatic HTTPS |
-
-## Requirements
-
-- VPS with Ubuntu 22.04/24.04 (1GB RAM minimum)
-- Domain for Vaultwarden (e.g., pass.yourdomain.com)
-- SSH access to server
-
-## Quick Start
-
-```bash
-# 1. Clone this repo
-git clone https://github.com/yourusername/private-server.git
-cd private-server
-
-# 2. Copy and edit config
-cp .env.example .env
-nano .env
-
-# 3. Run setup
-./setup.sh root@YOUR_SERVER_IP
-```
+| **WireGuard** | VPN |
+| **AdGuard Home** | Ad blocking (DNS) |
+| **Vaultwarden** | Password manager |
+| **Telegram Bot** | Remote VPN management |
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────┐
-│              Your VPS                       │
-│                                             │
-│  ┌─────────────┐  ┌─────────────────────┐  │
-│  │  WireGuard  │  │  Docker             │  │
-│  │  :51820/udp │  │  ┌───────────────┐  │  │
-│  └──────┬──────┘  │  │  AdGuard Home │  │  │
-│         │         │  │  :53, :3000   │  │  │
-│         ▼         │  └───────────────┘  │  │
-│   VPN Clients     │  ┌───────────────┐  │  │
-│   DNS → AdGuard   │  │  Vaultwarden  │  │  │
-│                   │  │  + Caddy      │  │  │
-│                   │  │  :80, :443    │  │  │
-│                   │  └───────────────┘  │  │
-│                   └─────────────────────┘  │
-└─────────────────────────────────────────────┘
+│                   VPS                        │
+│                                              │
+│  WireGuard (:51820)     Docker               │
+│       │                 ├─ AdGuard (:53)     │
+│       ▼                 ├─ Vaultwarden       │
+│  VPN Clients ──DNS────► └─ Caddy (HTTPS)     │
+│  (10.66.66.x)                                │
+│                                              │
+│  Telegram Bot (VPN management)               │
+└──────────────────────────────────────────────┘
 ```
 
-## Configuration
-
-Edit `.env` before running setup:
-
-```env
-DOMAIN=pass.yourdomain.com
-SERVER_IP=your.server.ip
-```
-
-## Post-Setup
-
-1. Add DNS record: `pass.yourdomain.com` → `SERVER_IP`
-2. Open AdGuard: `http://SERVER_IP:3000` (via VPN)
-3. Open Vaultwarden: `https://pass.yourdomain.com`
-
-## Commands
+## Quick Start
 
 ```bash
-# Add VPN client
-ssh root@SERVER "vpn-add device-name"
-
-# Manual backup
-ssh root@SERVER "backup-vaultwarden"
-
-# Check VPN status
-ssh root@SERVER "wg show"
+git clone https://github.com/yourusername/private-server.git
+cd private-server
+cp .env.example .env
+nano .env
+./setup.sh root@YOUR_SERVER_IP
 ```
 
-## Backup
+See [SETUP.md](SETUP.md) for detailed instructions.
 
-- Vaultwarden data: Daily to Google Drive (encrypted)
-- Server snapshot: Manual via hosting panel
+## Bot Commands
 
-## Cost
+| Command | Description |
+|---------|-------------|
+| `/add <name>` | Add VPN client |
+| `/list` | List clients |
+| `/remove <name>` | Remove client |
+| `/status` | Who's connected |
 
-~€7-8/month (1984.is, Hetzner, etc.)
+## Files
+
+```
+├── setup.sh          # Main install script
+├── .env.example      # Config template
+├── scripts/          # Server scripts
+├── bot/              # Telegram bot
+└── docker/           # Docker services
+```
 
 ## License
 
