@@ -2,6 +2,8 @@
 import os
 import subprocess
 import re
+import io
+import qrcode
 from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
@@ -101,10 +103,22 @@ async def add_client(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             with open(config_path, "r") as f:
                 config = f.read()
-            await update.message.reply_text(f"Client {name} created!\n\n```\n{config}\n```",
-                                            parse_mode="Markdown")
-        except Exception:
-            await update.message.reply_text(f"Client {name} created! Config: {config_path}")
+
+            qr = qrcode.QRCode(version=1, box_size=10, border=4)
+            qr.add_data(config)
+            qr.make(fit=True)
+            img = qr.make_image(fill_color="black", back_color="white")
+
+            buf = io.BytesIO()
+            img.save(buf, format='PNG')
+            buf.seek(0)
+
+            await update.message.reply_photo(
+                photo=buf,
+                caption=f"Client: {name}\n\nScan QR in WireGuard app"
+            )
+        except Exception as e:
+            await update.message.reply_text(f"Client {name} created but QR failed: {e}")
     else:
         await update.message.reply_text(f"Error: {result.stderr or result.stdout}")
 

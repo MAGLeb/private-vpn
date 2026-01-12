@@ -2,113 +2,46 @@
 
 ## Requirements
 
-- Fresh VPS with Ubuntu 22.04/24.04 (1GB RAM minimum)
-- Domain for Vaultwarden (e.g., pass.yourdomain.com)
-- SSH access to server
-- Telegram account
+- VPS: Ubuntu 22.04/24.04, 1GB RAM
+- Domain для Vaultwarden
+- Telegram аккаунт
 
 ## Installation
-
-### 1. Prepare
 
 ```bash
 git clone https://github.com/yourusername/private-server.git
 cd private-server
 cp .env.example .env
+nano .env  # заполнить конфиг
+./setup.sh root@SERVER_IP
 ```
 
-### 2. Create Telegram Bot
+**Telegram Bot:** @BotFather → `/newbot` → скопировать токен
+**Telegram ID:** @userinfobot → скопировать ID
 
-1. Open @BotFather in Telegram
-2. Send `/newbot`
-3. Copy the token
+## Post-Setup
 
-### 3. Get Your Telegram ID
+### AdGuard Home (через VPN)
 
-1. Open @userinfobot in Telegram
-2. Copy your ID
-
-### 4. Edit Config
-
-```bash
-nano .env
-```
-
-```env
-SERVER_IP=your.server.ip
-DOMAIN=pass.yourdomain.com
-TELEGRAM_TOKEN=123456:ABC-DEF...
-ADMIN_ID=123456789
-```
-
-### 5. Run Setup
-
-```bash
-./setup.sh root@YOUR_SERVER_IP
-```
-
-This installs everything automatically.
-
----
-
-## Post-Setup (Manual Steps)
-
-### 1. Connect to VPN
-
-Save the config shown after setup. Import to WireGuard client.
-
-### 2. Setup AdGuard Home
-
-Via VPN only:
 ```
 http://SERVER_IP:3000
 ```
+Создать аккаунт → Filters → DNS Blocklists → AdGuard DNS filter, OISD
 
-- Create admin account
-- Filters → DNS Blocklists → Add blocklist
-- Recommended: AdGuard DNS filter, OISD
+### Vaultwarden
 
-### 3. Add DNS Record
+1. DNS A-запись: `pass.yourdomain.com → SERVER_IP`
+2. Открыть `https://pass.yourdomain.com`
+3. Создать аккаунт → Admin panel → `SIGNUPS_ALLOWED=false`
 
-At your domain registrar, create A record:
-```
-pass.yourdomain.com → SERVER_IP
-```
-
-### 4. Setup Vaultwarden
-
-```
-https://pass.yourdomain.com
-```
-
-- Create your account
-- Disable signups after: Admin panel → `SIGNUPS_ALLOWED=false`
-
-### 5. Setup Cloud Backups (Optional)
+### Cloud Backups (опционально)
 
 ```bash
 ssh root@SERVER
-
-# Install rclone
-apt install rclone
-rclone config
-# Choose: n → gdrive → Google Drive → follow prompts
-
-# Create backup password
+apt install rclone && rclone config  # выбрать Google Drive
 openssl rand -base64 32 > /root/.backup-password
-
-# Test
-backup-vaultwarden
+backup-vaultwarden  # тест
 ```
-
-### 6. Save Secrets
-
-Store in Vaultwarden for disaster recovery:
-- `.env` contents
-- Backup password (`/root/.backup-password`)
-- VPN configs
-
----
 
 ## IP Allocation
 
@@ -118,99 +51,38 @@ Store in Vaultwarden for disaster recovery:
 | 10.66.66.2-9 | Your devices |
 | 10.66.66.10+ | Friends |
 
----
-
-## SSH Commands
+## Commands
 
 ```bash
-# Add VPN client
-ssh root@SERVER "vpn-add phone"
-
-# Check VPN status
-ssh root@SERVER "wg show"
-
-# Bot logs
-ssh root@SERVER "journalctl -u vpn-bot -f"
-
-# Restart bot
-ssh root@SERVER "systemctl restart vpn-bot"
-
-# Manual backup
-ssh root@SERVER "backup-vaultwarden"
+vpn-add phone              # добавить VPN клиент
+wg show                    # статус VPN
+journalctl -u vpn-bot -f   # логи бота
+systemctl restart vpn-bot  # перезапуск бота
+backup-vaultwarden         # бэкап
 ```
 
----
-
-## Updating
+## Update
 
 ```bash
-# Update everything
-./setup.sh root@SERVER
-
-# Update Docker only
+./setup.sh root@SERVER                    # полный апдейт
+# или только Docker:
 ssh root@SERVER "cd /root/setup/docker && docker compose pull && docker compose up -d"
 ```
 
----
-
 ## Disaster Recovery
 
-### Restore Vaultwarden
-
 ```bash
-# 1. Download backup
 rclone copy gdrive:vps-backups/vaultwarden-backup.tar.gz.gpg ./
-
-# 2. Decrypt
 gpg -d vaultwarden-backup.tar.gz.gpg > vaultwarden.tar.gz
-
-# 3. Extract
 tar -xzf vaultwarden.tar.gz
-
-# 4. Copy to new server (before setup)
 scp -r ./data root@NEW_SERVER:/root/setup/docker/
-
-# 5. Run setup
 ./setup.sh root@NEW_SERVER
 ```
 
-### Migration Checklist
-
-- [ ] Clone repo, edit `.env`
-- [ ] Run `./setup.sh`
-- [ ] Restore Vaultwarden data
-- [ ] Setup rclone
-- [ ] Update DNS record
-- [ ] Test all services
-
----
-
 ## Troubleshooting
 
-### Bot not responding
-
-```bash
-ssh root@SERVER "systemctl status vpn-bot"
-ssh root@SERVER "journalctl -u vpn-bot -n 50"
-```
-
-### VPN not connecting
-
-```bash
-ssh root@SERVER "wg show"
-ssh root@SERVER "systemctl status wg-quick@wg0"
-```
-
-### AdGuard not blocking
-
-- Check DNS = 10.66.66.1 in VPN config
-- Verify running: `docker ps`
-
----
-
-## Security
-
-- Bot requires VPN + Telegram ID (double auth)
-- AdGuard admin only via VPN
-- Vaultwarden uses HTTPS (Caddy)
-- UFW firewall enabled
+| Problem | Check |
+|---------|-------|
+| Bot не отвечает | `systemctl status vpn-bot` |
+| VPN не подключается | `wg show`, `systemctl status wg-quick@wg0` |
+| AdGuard не блокирует | DNS = 10.66.66.1, `docker ps` |
