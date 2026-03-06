@@ -1,24 +1,21 @@
 #!/bin/bash
-set -e
+source /root/.backup-password
 
-BACKUP_DIR="/root/backups"
-BACKUP_FILE="$BACKUP_DIR/vaultwarden-latest.tar.gz"
+BACKUP_FILE="/root/backups/vaultwarden-latest.tar.gz"
+ENCRYPTED_FILE="/tmp/vaultwarden-backup.tar.gz.gpg"
+mkdir -p /root/backups
 
-mkdir -p $BACKUP_DIR
+# Локальный бэкап
+tar -czf $BACKUP_FILE -C /opt/vaultwarden/data .
 
-echo "Creating backup..."
-tar -czf $BACKUP_FILE -C /root/setup/docker/data .
+# Шифруем
+gpg --batch --yes --passphrase "$ENCRYPT_PASSWORD" --output $ENCRYPTED_FILE -c $BACKUP_FILE
 
-if [ -f /root/.backup-password ] && command -v rclone &> /dev/null; then
-    source /root/.backup-password
-    ENCRYPTED="/tmp/vaultwarden-backup.tar.gz.gpg"
+# Загружаем в облако
+rclone delete gdrive:vps-backups/ 2>/dev/null
+rclone copy $ENCRYPTED_FILE gdrive:vps-backups/
 
-    gpg --batch --yes --passphrase "$ENCRYPT_PASSWORD" --output $ENCRYPTED -c $BACKUP_FILE
-    rclone delete gdrive:vps-backups/ 2>/dev/null || true
-    rclone copy $ENCRYPTED gdrive:vps-backups/
-    rm -f $ENCRYPTED
+# Чистим
+rm -f $ENCRYPTED_FILE
 
-    echo "Backup uploaded to Google Drive"
-fi
-
-echo "Local backup: $BACKUP_FILE"
+echo "Done: local + cloud (latest only)"

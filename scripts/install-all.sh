@@ -45,6 +45,14 @@ cp /root/setup/bot/vpn-bot.service /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable --now vpn-bot
 
+echo "=== Setting up backup cron ==="
+(crontab -l 2>/dev/null | grep -v backup-vaultwarden; echo "0 3 * * * /usr/local/bin/backup-vaultwarden") | crontab -
+
+echo "=== Setting up auto-updates with reboot ==="
+apt install -y unattended-upgrades needrestart
+sed -i 's|//Unattended-Upgrade::Automatic-Reboot "false";|Unattended-Upgrade::Automatic-Reboot "true";|' /etc/apt/apt.conf.d/50unattended-upgrades
+sed -i 's|//Unattended-Upgrade::Automatic-Reboot-Time "02:00";|Unattended-Upgrade::Automatic-Reboot-Time "05:00";|' /etc/apt/apt.conf.d/50unattended-upgrades
+
 echo "=== Configuring firewall ==="
 ufw allow 22/tcp
 ufw allow 51820/udp
