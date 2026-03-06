@@ -30,8 +30,8 @@ services:
     container_name: adguard
     restart: unless-stopped
     ports:
-      - "53:53/tcp"
-      - "53:53/udp"
+      - "10.66.66.1:53:53/tcp"
+      - "10.66.66.1:53:53/udp"
       - "3000:3000/tcp"
     volumes:
       - ./adguard/work:/opt/adguardhome/work
